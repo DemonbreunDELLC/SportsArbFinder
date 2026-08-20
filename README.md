@@ -22,6 +22,14 @@ browser alerts, and multi-market scanning — all powered by [The Odds API](http
 
 ## Quick start
 
+### Windows (easiest — no typing)
+
+1. Install Python from https://www.python.org/downloads/ — **tick "Add Python to PATH"** in the installer.
+2. Find the `SportsArbFinder` folder (where `start_windows.bat` lives).
+3. **Double-click `start_windows.bat`.** It installs the packages, starts the app, and opens http://localhost:8000.
+
+### Any OS (manual)
+
 ```bash
 pip install -r requirements.txt
 
