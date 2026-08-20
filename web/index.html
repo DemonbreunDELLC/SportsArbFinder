@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SportsArbFinder — Arbitrage &amp; +EV Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">⚡</span>
+    <span>SportsArbFinder</span><span class="pro">Pro</span>
+  </div>
+  <div class="topbar-right">
+    <span id="source-badge" class="badge"><span class="dot"></span><span id="source-label">…</span></span>
+    <span id="credits-badge" class="badge" style="display:none">🪙 <span id="credits-label">—</span></span>
+    <span id="updated-badge" class="badge"><span id="updated-label">never scanned</span></span>
+    <button id="scan-btn" class="btn" title="Scan now">⟳ Refresh now</button>
+    <button id="notify-btn" class="btn" title="Browser notifications for new arbs">🔔 Alerts</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab-btn active" data-tab="arb">Arbitrage <span class="count" id="cnt-arb">0</span></button>
+  <button class="tab-btn" data-tab="ev">+EV Bets <span class="count" id="cnt-ev">0</span></button>
+  <button class="tab-btn" data-tab="odds">Odds Screen</button>
+  <button class="tab-btn" data-tab="calc">Calculators</button>
+  <button class="tab-btn" data-tab="settings">Settings</button>
+</nav>
+
+<main>
+  <!-- ============================= ARBITRAGE ============================= -->
+  <section class="tab-panel active" id="tab-arb">
+    <div class="stat-grid">
+      <div class="stat"><div class="label">Opportunities</div><div class="value blue" id="st-arb">0</div><div class="sub">across all markets</div></div>
+      <div class="stat"><div class="label">Avg margin</div><div class="value green" id="st-avg">0.00%</div><div class="sub">best prices, no-vig</div></div>
+      <div class="stat"><div class="label">Biggest edge</div><div class="value amber" id="st-best">0.00%</div><div class="sub">single opportunity</div></div>
+      <div class="stat"><div class="label">Events scanned</div><div class="value" id="st-events">0</div><div class="sub">this scan</div></div>
+    </div>
+
+    <div class="filters">
+      <label>Sport</label>
+      <select id="f-sport"><option value="">All</option></select>
+      <label>Market</label>
+      <div class="chips" id="f-market-chips"></div>
+      <label>Min %</label>
+      <input type="number" id="f-min" min="0" step="0.1" value="0">
+      <label>Max %</label>
+      <input type="number" id="f-max" min="0" step="0.5" value="20">
+      <label>Search</label>
+      <input type="text" id="f-search" placeholder="team or event…" style="width:170px">
+      <label>Stake $</label>
+      <input type="number" id="f-stake" min="1" step="10" value="100" style="width:90px">
+      <label>Sort</label>
+      <select id="f-sort">
+        <option value="margin-desc">Margin ↓</option>
+        <option value="margin-asc">Margin ↑</option>
+        <option value="soonest">Starts soonest</option>
+      </select>
+    </div>
+
+    <div id="arb-list" class="arb-list"><div class="loading"><div class="spinner"></div>Waiting for first scan…</div></div>
+  </section>
+
+  <!-- ============================= +EV BETS ============================= -->
+  <section class="tab-panel" id="tab-ev">
+    <div class="filters">
+      <label>Sport</label>
+      <select id="ev-sport"><option value="">All</option></select>
+      <label>Min EV %</label>
+      <input type="number" id="ev-min" min="0" step="0.5" value="1">
+      <label class="check-item" style="margin-left:6px"><input type="checkbox" id="ev-sharp"> Sharp (Pinnacle) only</label>
+    </div>
+    <div class="table-wrap">
+      <table id="ev-table">
+        <thead>
+          <tr>
+            <th data-key="ev_percent">EV %</th>
+            <th data-key="event">Event</th>
+            <th data-key="market">Market</th>
+            <th data-key="outcome">Outcome</th>
+            <th data-key="bookmaker">Book</th>
+            <th data-key="odds">Odds</th>
+            <th data-key="fair_prob">Fair prob</th>
+            <th data-key="starts_in_minutes">Starts</th>
+          </tr>
+        </thead>
+        <tbody id="ev-body"><tr><td colspan="8" class="muted" style="text-align:center;padding:30px">Waiting for data…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================= ODDS SCREEN ============================= -->
+  <section class="tab-panel" id="tab-odds">
+    <div class="filters">
+      <label>Sport</label>
+      <select id="o-sport"><option value="">All</option></select>
+    </div>
+    <div id="odds-screen"><div class="empty-state"><div class="big">📊</div>Select a sport to compare lines across bookmakers.</div></div>
+  </section>
+
+  <!-- ============================= CALCULATORS ============================= -->
+  <section class="tab-panel" id="tab-calc">
+    <div class="calc-grid">
+
+      <div class="calc">
+        <h3>🧮 Arbitrage / Dutching</h3>
+        <div class="desc">Split a stake across outcomes so every result pays the same.</div>
+        <div id="arb-calc-legs"></div>
+        <div class="row">
+          <label>Stake $</label>
+          <input type="number" id="ac-stake" value="100" min="1">
+          <button class="btn" id="ac-add" title="Add outcome">+ leg</button>
+        </div>
+        <div class="result" id="ac-result"></div>
+      </div>
+
+      <div class="calc">
+        <h3>🎯 Expected Value</h3>
+        <div class="desc">Your edge: fair win probability vs the price offered.</div>
+        <div class="row"><label>Fair prob %</label><input type="number" id="evc-prob" value="50" min="0.1" max="99.9" step="0.1"></div>
+        <div class="row"><label>Decimal odds</label><input type="number" id="evc-odds" value="2.10" min="1.01" step="0.01"></div>
+        <div class="row"><label>Stake $</label><input type="number" id="evc-stake" value="100" min="1"></div>
+        <div class="result" id="evc-result"></div>
+      </div>
+
+      <div class="calc">
+        <h3>🔁 Odds Converter</h3>
+        <div class="desc">Decimal ↔ American ↔ Fractional ↔ implied probability.</div>
+        <div class="row"><label>Decimal</label><input type="number" id="oc-decimal" value="2.10" min="1.01" step="0.01"></div>
+        <div class="row"><label>American</label><input type="number" id="oc-american" value="110"></div>
+        <div class="row"><label>Fractional</label><input type="text" id="oc-fractional" value="11/10"></div>
+        <div class="row"><label>Implied %</label><input type="number" id="oc-implied" value="47.62" min="0.1" max="99.9" step="0.01"></div>
+        <div class="result" id="oc-result"></div>
+      </div>
+
+      <div class="calc">
+        <h3>🛡️ Hedge Calculator</h3>
+        <div class="desc">Lock in profit on an open bet by hedging at the exchange.</div>
+        <div class="row"><label>Back stake $</label><input type="number" id="hc-stake" value="100" min="1"></div>
+        <div class="row"><label>Back odds</label><input type="number" id="hc-back" value="2.50" min="1.01" step="0.01"></div>
+        <div class="row"><label>Lay odds</label><input type="number" id="hc-lay" value="2.20" min="1.01" step="0.01"></div>
+        <div class="row"><label>Commission %</label><input type="number" id="hc-comm" value="2" min="0" max="10" step="0.5"></div>
+        <div class="result" id="hc-result"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================= SETTINGS ============================= -->
+  <section class="tab-panel" id="tab-settings">
+    <div class="settings-grid">
+      <div class="set-group">
+        <h3>Data source</h3>
+        <div class="set-row"><label>Region</label>
+          <select id="s-region">
+            <option value="us">US</option><option value="uk">UK</option>
+            <option value="eu">EU</option><option value="au">AU</option>
+          </select>
+        </div>
+        <div class="set-row"><label>Refresh (seconds)</label><input type="number" id="s-refresh" min="15" step="15" value="300"></div>
+        <div class="set-row"><label>Max sports scanned</label><input type="number" id="s-maxsports" min="1" max="30" value="10"></div>
+        <div class="set-row" id="s-key-row"><label>API key</label><span class="badge" id="s-key-status">—</span></div>
+        <div class="desc" style="font-size:11.5px;color:var(--muted)">The free Odds API tier is 500 credits/month. Each sport × market × region costs 1 credit per scan — keep the refresh interval sensible.</div>
+      </div>
+      <div class="set-group">
+        <h3>Markets</h3>
+        <div class="check-grid" id="s-markets"></div>
+      </div>
+      <div class="set-group">
+        <h3>Sports</h3>
+        <div class="check-grid" id="s-sports"></div>
+      </div>
+      <div class="set-group">
+        <h3>Filters</h3>
+        <div class="set-row"><label>Min arb margin %</label><input type="number" id="s-cutoff" min="0" step="0.1" value="0"></div>
+        <div class="set-row"><label>Max arb margin %</label><input type="number" id="s-maxprofit" min="0" step="0.5" value="20"></div>
+        <div class="set-row"><label>Min EV %</label><input type="number" id="s-minev" min="0" step="0.5" value="1"></div>
+        <div class="set-row"><label>Default stake $</label><input type="number" id="s-stake" min="1" step="10" value="100"></div>
+        <div class="set-row"><label>Exchange commission %</label><input type="number" id="s-comm" min="0" max="10" step="0.5" value="2"></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
+      <button class="btn primary" id="s-save">Save &amp; rescan</button>
+      <span class="muted" id="s-status" style="font-size:12.5px"></span>
+    </div>
+  </section>
+
+  <div class="foot-note">SportsArbFinder Pro — educational tool. Odds move fast; always verify before betting. Gamble responsibly.</div>
+</main>
+
+<div id="toast"></div>
+<script src="/app.js"></script>
+</body>
+</html>
