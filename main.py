@@ -60,11 +60,21 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Launch the web dashboard after scanning")
     p.add_argument("--out", type=str, default="arbitrage_results.json",
                    help="Where to write the results JSON")
+    p.add_argument("--check-key", action="store_true",
+                   help="Just test whether your ODDS_API_KEY works, then exit")
     return p
 
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
+
+    if args.check_key:
+        from odds_api import OddsAPI
+        from config import Config as _C
+        probe = OddsAPI(_C(api_key=args.api_key))
+        ok, msg = probe.check_api_key()
+        print("✓" if ok else "✗", msg)
+        return 0 if ok else 1
 
     config = Config(
         region=args.region,
@@ -137,4 +147,4 @@ def _print_terminal_summary(results, interactive=False):
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

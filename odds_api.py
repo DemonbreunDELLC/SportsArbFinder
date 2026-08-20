@@ -48,6 +48,39 @@ class OddsAPI:
         self._offline_data = None
 
     # ------------------------------------------------------------------
+    # Key verification helper
+    # ------------------------------------------------------------------
+
+    def check_api_key(self) -> tuple[bool, str]:
+        """Test the configured key against the live API.
+
+        Returns (ok, message). Used by `main.py --check-key`.
+        """
+        if not self.api_key:
+            return False, "No key found. Create a .env file with ODDS_API_KEY=your_key"
+        try:
+            response = self.session.get(
+                f"{self.base_url}/sports",
+                params={"apiKey": self.api_key, "all": "false"},
+                timeout=20,
+            )
+        except requests.RequestException as e:
+            return False, f"Network error reaching The Odds API: {e}"
+        if response.status_code == 200:
+            self.remaining_requests = response.headers.get("x-requests-remaining")
+            self.used_requests = response.headers.get("x-requests-used")
+            return True, f"Key works! {len(response.json())} sports available. " \
+                         f"Credits remaining: {self.remaining_requests}"
+        if response.status_code == 401:
+            return False, "Unauthorized (401): the key was rejected. Check for typos " \
+                          "(paste it exactly, no spaces) or that it's still active."
+        if response.status_code == 403:
+            return False, "Forbidden (403): the key may be disabled or IP-restricted."
+        if response.status_code == 429:
+            return False, "Rate limited (429): monthly quota exhausted — check your plan."
+        return False, f"Unexpected response: HTTP {response.status_code}"
+
+    # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
